@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
+import { App, Editor, Notice, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
 import type moment from "moment"
 import numeral from 'numeral'
 
@@ -74,7 +74,7 @@ export default class CryptoLookup extends Plugin {
 			name: 'Insert Default Crypto Ticker',
 			editorCallback: async (editor: Editor) => {
 				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-					new ErrorNoticeModal(this.app).open()
+					new Notice("Cannot use this command without default base and target in settings")
 				} else {
 					const base = this.settings.defaultBase
 					const target = this.settings.defaultTarget
@@ -92,7 +92,7 @@ export default class CryptoLookup extends Plugin {
 			name: 'Insert Default Crypto Ticker Extended',
 			editorCallback: async (editor: Editor) => {
 				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-					new ErrorNoticeModal(this.app).open()
+					new Notice("Cannot use this command without default base and target in settings")
 				} else {
 					const base = this.settings.defaultBase
 					const target = this.settings.defaultTarget
@@ -149,22 +149,6 @@ export default class CryptoLookup extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class ErrorNoticeModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Cannot use this command without default base and target in settings');
-	}
-
-	onClose() {
-		let {contentEl} = this;
-		contentEl.empty();
 	}
 }
 
