@@ -1,79 +1,142 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
+import type moment from "moment"
+import numeral from 'numeral'
 
-interface MyPluginSettings {
-	mySetting: string;
+import { CryptoModal } from './crypto-modal'
+
+declare global {
+	interface Window {
+		moment: typeof moment;
+	}
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+export const CRYPTONATOR_API : string = 'https://api.cryptonator.com/api'
+
+interface CryptoLookupSettings {
+	defaultBase: string;
+	defaultTarget: string;
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+interface CurrencyResult {
+	ticker: CurrencyTicker;
+	timestamp: number;
+	success: boolean;
+	error: string;
+}
+
+interface CurrencyTicker {
+	base: string;
+	target: string;
+	price: number;
+	volume: number;
+	change: number;
+}
+
+interface CurrencyEntries {
+	rows: CurrencyEntry[]
+}
+
+interface CurrencyEntry {
+	code: string;
+	name: string;
+	statuses: string[]
+}
+
+const DEFAULT_SETTINGS: CryptoLookupSettings = {
+	defaultBase: 'BTC',
+	defaultTarget: 'USD'
+}
+
+export default class CryptoLookup extends Plugin {
+	settings: CryptoLookupSettings;
+
+	async getCurrencyTicker(base: string, target: string) : Promise<CurrencyResult> {
+		const data = await request({
+			url: `${CRYPTONATOR_API}/ticker/${base}-${target}`
+		})
+
+		return JSON.parse(data) as CurrencyResult
+	}
+
+	async getCurrencyList() : Promise<CurrencyEntries> {
+		const data = await request({
+			url: `${CRYPTONATOR_API}/currencies`
+		})
+
+		return JSON.parse(data) as CurrencyEntries
+	}
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		let ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		let statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				let markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+			id: 'insert-default-crypto-ticker',
+			name: 'Insert Default Crypto Ticker',
+			editorCallback: async (editor: Editor) => {
+				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
+					new ErrorNoticeModal(this.app).open()
+				} else {
+					const base = this.settings.defaultBase
+					const target = this.settings.defaultTarget
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
+
+					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
+					editor.replaceSelection(extendedCryptoTicker)
 				}
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addCommand({
+			id: 'insert-default-crypto-ticker-extended',
+			name: 'Insert Default Crypto Ticker Extended',
+			editorCallback: async (editor: Editor) => {
+				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
+					new ErrorNoticeModal(this.app).open()
+				} else {
+					const base = this.settings.defaultBase
+					const target = this.settings.defaultTarget
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
+
+					const formattedTimestamp: string = window.moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
+					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
+					editor.replaceSelection(extendedCryptoTicker)
+				}
+			}
 		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addCommand({
+			id: 'insert-selected-crypto-ticker',
+			name: 'Insert Selected Crypto Ticker',
+			editorCallback: async (editor: Editor) => {
+				const onSubmit = async (base: string, target: string) => {
+					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
+
+					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
+					editor.replaceSelection(extendedCryptoTicker)
+				}
+				new CryptoModal(this.app, "USD", onSubmit).open()
+			}
+		});
+
+		this.addCommand({
+			id: 'insert-selected-crypto-ticker-extended',
+			name: 'Insert Selected Crypto Ticker Extended',
+			editorCallback: async (editor: Editor) => {
+				const onSubmit = async (base: string, target: string) => {
+					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
+
+					const formattedTimestamp: string = window.moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
+					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
+					editor.replaceSelection(extendedCryptoTicker)
+				}
+				new CryptoModal(this.app, "USD", onSubmit).open()
+			}
+		});
+
+		// This adds a settings tab so the user can configure various aspects of the plugin
+		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -89,14 +152,14 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
+class ErrorNoticeModal extends Modal {
 	constructor(app: App) {
 		super(app);
 	}
 
 	onOpen() {
 		let {contentEl} = this;
-		contentEl.setText('Woah!');
+		contentEl.setText('Cannot use this command without default base and target in settings');
 	}
 
 	onClose() {
@@ -105,10 +168,10 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class CryptoLookupSettingTab extends PluginSettingTab {
+	plugin: CryptoLookup;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: CryptoLookup) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -118,17 +181,27 @@ class SampleSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.createEl('h2', {text: 'Crypto Lookup Defaults'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('Base Currency')
+			.setDesc('Default currency we want the price of')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder('BTC')
+				.setValue(this.plugin.settings.defaultBase)
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.defaultBase = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Target Currency')
+			.setDesc('Default target currency to convert base currency into')
+			.addText(text => text
+				.setPlaceholder('USD')
+				.setValue(this.plugin.settings.defaultTarget)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultTarget = value;
 					await this.plugin.saveSettings();
 				}));
 	}
