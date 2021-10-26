@@ -1,14 +1,7 @@
-import {App, Editor, Notice, Plugin, PluginSettingTab, Setting, request, normalizePath} from 'obsidian';
-import type moment from "moment"
+import {App, Editor, Notice, Plugin, PluginSettingTab, Setting, request, normalizePath, moment} from 'obsidian';
 import numeral from 'numeral'
 
 import { CryptoModal } from './crypto-modal'
-
-declare global {
-	interface Window {
-		moment: typeof moment;
-	}
-}
 
 export const CRYPTONATOR_API : string = 'https://api.cryptonator.com/api'
 
@@ -62,30 +55,31 @@ export default class CryptoLookup extends Plugin {
 		})
 	}
 
-	async onload() {
-		await this.loadSettings();
-
+	async preloadCurrencies() {
 		const adapter = this.app.vault.adapter;
 		const dir = this.manifest.dir;
+		const path = normalizePath(`${dir}/currencies.json`)
 
-		await (async () => {
-			const path = normalizePath(`${dir}/currencies.json`)
-			if (await adapter.exists(path)) {
-				const currencies = await adapter.read(path)
-				this.currencies = JSON.parse(currencies).rows as CurrencyEntry[]
-			} else {
-				try {
-					const currencyText: string = await this.getCurrencyListAsJson()
-					await adapter.write(path, currencyText)
+		if (await adapter.exists(path)) {
+			const currencies = await adapter.read(path)
+			this.currencies = JSON.parse(currencies).rows as CurrencyEntry[]
+		} else {
+			try {
+				const currencyText: string = await this.getCurrencyListAsJson()
+				await adapter.write(path, currencyText)
 
-					this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
-				} catch(error) {
-					const text = 'The JSON file could not be read.';
-					new Notice(text);
-					console.error(error)
-				}
+				this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
+			} catch(error) {
+				const text = 'The JSON file could not be read.';
+				new Notice(text);
+				console.error(error)
 			}
-		})();
+		}
+	}
+
+	async onload() {
+		await this.loadSettings();
+		await this.preloadCurrencies()
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
@@ -154,10 +148,6 @@ export default class CryptoLookup extends Plugin {
 		});
 
 		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
-	}
-
-	onunload() {
-
 	}
 
 	async loadSettings() {
