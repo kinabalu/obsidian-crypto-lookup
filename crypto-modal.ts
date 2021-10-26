@@ -22,9 +22,10 @@ export class CryptoModal extends Modal {
 		contentEl.createEl("h1", { text: "Select crypto base and target" });
 
 		new Setting(contentEl).setName("Base").addText((text) =>
-			text.setValue(this.base).onChange((value) => {
+			text
+				.setValue(this.base).onChange((value) => {
 				this.base = value;
-			})
+			}).inputEl.focus()
 		);
 
 		new Setting(contentEl).setName("Target").addText((text) =>

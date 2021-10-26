@@ -59,25 +59,27 @@ export default class CryptoLookup extends Plugin {
 		const adapter = this.app.vault.adapter;
 		const dir = this.manifest.dir;
 		const path = normalizePath(`${dir}/currencies.json`)
+		let currencyText : string;
 
 		if (await adapter.exists(path)) {
-			const currencies = await adapter.read(path)
-			this.currencies = JSON.parse(currencies).rows as CurrencyEntry[]
+			currencyText = await adapter.read(path)
 		} else {
+			currencyText = await this.getCurrencyListAsJson()
+
 			try {
-				const currencyText: string = await this.getCurrencyListAsJson()
-				this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
 				await adapter.write(path, currencyText)
 			} catch(error) {
 				new Notice('The currencies file could not be cached.');
 				console.error(error)
 			}
 		}
+
+		this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
 	}
 
 	async onload() {
-		await this.loadSettings();
-		await this.preloadCurrencies()
+		await Promise.all([this.loadSettings(), this.preloadCurrencies()])
+		// await Promise.all([this.loadSettings()])
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
@@ -109,7 +111,7 @@ export default class CryptoLookup extends Plugin {
 
 					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
 
-					const formattedTimestamp: string = window.moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
+					const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
 					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
 					editor.replaceSelection(extendedCryptoTicker)
 				}
@@ -137,7 +139,7 @@ export default class CryptoLookup extends Plugin {
 				const onSubmit = async (base: string, target: string) => {
 					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
 
-					const formattedTimestamp: string = window.moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
+					const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
 					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
 					editor.replaceSelection(extendedCryptoTicker)
 				}
