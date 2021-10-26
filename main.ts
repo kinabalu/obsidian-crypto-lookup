@@ -66,12 +66,10 @@ export default class CryptoLookup extends Plugin {
 		} else {
 			try {
 				const currencyText: string = await this.getCurrencyListAsJson()
-				await adapter.write(path, currencyText)
-
 				this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
+				await adapter.write(path, currencyText)
 			} catch(error) {
-				const text = 'The JSON file could not be read.';
-				new Notice(text);
+				new Notice('The currencies file could not be cached.');
 				console.error(error)
 			}
 		}
