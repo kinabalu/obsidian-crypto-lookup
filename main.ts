@@ -79,7 +79,6 @@ export default class CryptoLookup extends Plugin {
 
 	async onload() {
 		await Promise.all([this.loadSettings(), this.preloadCurrencies()])
-		// await Promise.all([this.loadSettings()])
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
