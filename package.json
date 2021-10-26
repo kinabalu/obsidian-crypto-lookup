@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-crypto-lookup",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "A plugin for Obsidian which uses the Cryptonator API to pull back prices for crypto in a target currency",
 	"main": "main.js",
 	"scripts": {
