@@ -1,4 +1,4 @@
-import { App, Editor, Notice, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
+import {App, Editor, Notice, Plugin, PluginSettingTab, Setting, request, normalizePath} from 'obsidian';
 import type moment from "moment"
 import numeral from 'numeral'
 
@@ -32,10 +32,6 @@ interface CurrencyTicker {
 	change: number;
 }
 
-interface CurrencyEntries {
-	rows: CurrencyEntry[]
-}
-
 interface CurrencyEntry {
 	code: string;
 	name: string;
@@ -50,6 +46,8 @@ const DEFAULT_SETTINGS: CryptoLookupSettings = {
 export default class CryptoLookup extends Plugin {
 	settings: CryptoLookupSettings;
 
+	currencies: CurrencyEntry[];
+
 	async getCurrencyTicker(base: string, target: string) : Promise<CurrencyResult> {
 		const data = await request({
 			url: `${CRYPTONATOR_API}/ticker/${base}-${target}`
@@ -58,16 +56,36 @@ export default class CryptoLookup extends Plugin {
 		return JSON.parse(data) as CurrencyResult
 	}
 
-	async getCurrencyList() : Promise<CurrencyEntries> {
-		const data = await request({
+	async getCurrencyListAsJson() : Promise<string> {
+		return await request({
 			url: `${CRYPTONATOR_API}/currencies`
 		})
-
-		return JSON.parse(data) as CurrencyEntries
 	}
 
 	async onload() {
 		await this.loadSettings();
+
+		const adapter = this.app.vault.adapter;
+		const dir = this.manifest.dir;
+
+		await (async () => {
+			const path = normalizePath(`${dir}/currencies.json`)
+			if (await adapter.exists(path)) {
+				const currencies = await adapter.read(path)
+				this.currencies = JSON.parse(currencies).rows as CurrencyEntry[]
+			} else {
+				try {
+					const currencyText: string = await this.getCurrencyListAsJson()
+					await adapter.write(path, currencyText)
+
+					this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
+				} catch(error) {
+					const text = 'The JSON file could not be read.';
+					new Notice(text);
+					console.error(error)
+				}
+			}
+		})();
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
@@ -135,7 +153,6 @@ export default class CryptoLookup extends Plugin {
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
 	}
 
