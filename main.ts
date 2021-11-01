@@ -55,30 +55,30 @@ export default class CryptoLookup extends Plugin {
 		})
 	}
 
-	async preloadCurrencies() {
-		const adapter = this.app.vault.adapter;
-		const dir = this.manifest.dir;
-		const path = normalizePath(`${dir}/currencies.json`)
-		let currencyText : string;
-
-		if (await adapter.exists(path)) {
-			currencyText = await adapter.read(path)
-		} else {
-			currencyText = await this.getCurrencyListAsJson()
-
-			try {
-				await adapter.write(path, currencyText)
-			} catch(error) {
-				new Notice('The currencies file could not be cached.');
-				console.error(error)
-			}
-		}
-
-		this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
-	}
+	// async preloadCurrencies() {
+	// 	const adapter = this.app.vault.adapter;
+	// 	const dir = this.manifest.dir;
+	// 	const path = normalizePath(`${dir}/currencies.json`)
+	// 	let currencyText : string;
+	//
+	// 	if (await adapter.exists(path)) {
+	// 		currencyText = await adapter.read(path)
+	// 	} else {
+	// 		currencyText = await this.getCurrencyListAsJson()
+	//
+	// 		try {
+	// 			await adapter.write(path, currencyText)
+	// 		} catch(error) {
+	// 			new Notice('The currencies file could not be cached.');
+	// 			console.error(error)
+	// 		}
+	// 	}
+	//
+	// 	this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
+	// }
 
 	async onload() {
-		await Promise.all([this.loadSettings(), this.preloadCurrencies()])
+		await this.loadSettings()
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
