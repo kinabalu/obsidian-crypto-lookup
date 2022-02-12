@@ -3,7 +3,12 @@ import numeral from 'numeral'
 
 import { CryptoModal } from './crypto-modal'
 
+//code block processor
+import { cryptoProcessor } from "./processors/cryptoProcessor";
+import { Console } from 'console';
+
 export const CRYPTONATOR_API : string = 'https://api.cryptonator.com/api'
+
 
 interface CryptoLookupSettings {
 	defaultBase: string;
@@ -18,12 +23,15 @@ interface CurrencyResult {
 }
 
 interface CurrencyTicker {
-	base: string;
-	target: string;
+	base: string; 
+	target: string; 
 	price: number;
 	volume: number;
 	change: number;
 }
+
+
+
 
 interface CurrencyEntry {
 	code: string;
@@ -42,9 +50,19 @@ export default class CryptoLookup extends Plugin {
 	currencies: CurrencyEntry[];
 
 	async getCurrencyTicker(base: string, target: string) : Promise<CurrencyResult> {
+
+		//DEBUG
+		console.log(`${CRYPTONATOR_API}/ticker/${base}-${target}`);
+		//
+
 		const data = await request({
 			url: `${CRYPTONATOR_API}/ticker/${base}-${target}`
 		})
+
+		//DEBUG
+		console.log(data);
+		//
+
 
 		return JSON.parse(data) as CurrencyResult
 	}
@@ -77,8 +95,69 @@ export default class CryptoLookup extends Plugin {
 	// 	this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
 	// }
 
+
+
+
 	async onload() {
 		await this.loadSettings()
+
+		/*
+		Requests were returning the Cloudfare DDOS protection html instead of JSON (the "wait 5 seconds" screen) 
+		I think they may have just recently added Cloudfare protection to the API because I never encountered this error before.
+		*/
+		//bypass cloudfare ddos protection -
+			
+		
+
+		//code block processor
+		this.registerMarkdownCodeBlockProcessor("crypto", async (source, el, ctx) => {
+				/*
+					source 	= 	text inside block (edit mode)
+					el 	 	= 	div to render into (preview mode)
+				*/
+
+
+
+			//coin list in edit mode
+			const sourceCoins = source.split("\n").filter((row) => row.length > 0);
+
+			//notify user while awaiting results:
+			let loadingNotify = el.createEl("span");
+			loadingNotify.innerHTML = "Loading cryptocurrencies..."
+
+
+			//const base = this.settings.defaultBase
+			const target = this.settings.defaultTarget
+			let coinResults = []
+
+			//get each coin ticker
+			for (let i = 0; i < sourceCoins.length; i++) {
+				const coinSymbol = sourceCoins[i];
+
+				
+				let result = await this.getCurrencyTicker(coinSymbol.toLocaleLowerCase(), target.toLocaleLowerCase())
+
+				console.log("Result returned:   " + result.toString() + "  |  " + result);
+
+				//coinResults.push();
+				
+			}
+	  
+			const table = el.createEl("table");
+			const body = table.createEl("tbody");
+	  
+			for (let i = 0; i < sourceCoins.length; i++) {
+			  const cols = sourceCoins[i].split(",");
+	  
+			  const row = body.createEl("tr");
+	  
+			  for (let j = 0; j < cols.length; j++) {
+				row.createEl("td", { text: cols[j] });
+			  }
+			}
+			
+		  });
+
 
 		this.addCommand({
 			id: 'insert-default-crypto-ticker',
