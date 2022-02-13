@@ -7,37 +7,26 @@ import {
     setIcon,
     TFile,
   } from "obsidian";
+import { exitCode } from "process";
   
   interface Quote {
     file: TFile;
     subpath: string;
-    markdown: string;
+    markdown: string; 
     title: string;
     author?: string;
   }
   
-  export async function cryptoProcessor(
+  export async function cryptoProcessor( 
     app: App,
+    
     source: string,
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext
   ) {
     try {
-      /*
-      const embed = parse(source);
-      const quote = await assembleQuote(app, ctx.sourcePath, embed);
-      renderQuote(app, el, ctx.sourcePath, quote, embed.display, embed.show);
-      */
-    } catch (e) {
-      renderError(el, e);
-    }
-  }
-  
-
-
-
-
-
+      
+      
 
 
 
