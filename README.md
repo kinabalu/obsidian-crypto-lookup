@@ -1,16 +1,27 @@
 ## Crypto Lookup for Obsidian
-Lookup of crypto -> a target currency value using the [Cryptonator API](https://www.cryptonator.com/api).
 
-### Features
-- A command to fetch specified crypto exchange rate specified in modal (extra data and just price) 
-- A command to fetch default crypto exchange rate specified in settings (extra data and just price) 
+### Usage
 
+Use code block with identifier `crypto` to fetch live cryptocurrency price data.
+
+##### Example:
+
+Code block (in edit mode):
+
+![image](https://user-images.githubusercontent.com/54555500/153975119-914f5b84-2014-4358-b2ad-877b2730cde4.png)
+
+Currency results (in preview mode):
+
+![image](https://user-images.githubusercontent.com/54555500/153975175-a4a25aa9-74e4-4051-88c3-df49f6adb440.png)
+
+
+
+
+<!--
 ### Coming Soon
 - Lookup upon install of all supported currencies so can auto-complete
 - Better error handling / checking 
-
-### Installation
-The Crypto Lookup for Obsidian plugin release is pending review.
+-->
 
 ### Manual Installation
 Two methods and the first one is easier:
@@ -24,8 +35,12 @@ Two methods and the first one is easier:
   `main.js`, `manifest.json`, and the `styles.css` files from the
   [latest release](https://github.com/kinabalu/obsidian-crypto-lookup/releases) to the folder.
 
-## Say Thanks 🙏
+## Credits 🙏
+
+[My github](https://github.com/kinabalu)
 
 If you like this plugin and would like to buy me a coffee, you can!
 
 [<img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="BuyMeACoffee" width="100">](https://www.buymeacoffee.com/andrewlombardi)
+
+- Contributions by: [cheeseonamonkey](https://github.com/cheeseonamonkey)
