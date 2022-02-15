@@ -115,12 +115,6 @@ try{
 
 }//end draw row function
 
-async getCurrencyListAsJson() : Promise<string> {
-return await request({
-	url: `${CRYPTONATOR_API}/currencies`
-})
-}
-
 
 
 
@@ -135,6 +129,7 @@ async onload() {
 		source 	= 	text inside block (edit mode)
 		el 	 	= 	div to render into (preview mode) */
 		
+		try {
 		
 		const sourceCoins = source.split("\n").filter((row) => row.length > 0);
 		
@@ -182,7 +177,7 @@ async onload() {
 		//
 		//make request
 		let coins = await this.getCurrencies(requestUrl)
-		.catch(e => console.log(e.toString()));
+		
 		
 		
 		//DEBUG output:
@@ -191,7 +186,7 @@ async onload() {
 		//
 		
 		
-		//
+		// 
 		//draw results to UI:
 		
 		//init table:
@@ -228,9 +223,13 @@ async onload() {
 		//remove the 'loading cryptocurrencies...' placeholder
 		loadingNotify.remove(); 
 				
-				
+	}catch(e) {
+		console.log(e.toString());
+		el.createEl('p', {text: 'Error - ' + e.toString()});
+	}
+	
 		});
-
+	
 		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
 }
 			
