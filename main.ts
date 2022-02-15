@@ -262,7 +262,7 @@ class CryptoLookupSettingTab extends PluginSettingTab {
 		let li;
 
 		li = ul.createEl('li');
-		li.createEl('a', {text: 'kinabalu', href: 'https://github.com/kinabalu' } );
+		li.createEl('a', {text: 'kinabalu', href: 'https://github.com/kinabalu' } ); 
 
 		li = ul.createEl('li');
 		li.createEl('a', {text: 'cheeseonamonkey', href: 'https://github.com/cheeseonamonkey' } );
