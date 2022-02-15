@@ -251,7 +251,10 @@ async onload() {
 				
 	}catch(e) {
 		console.log('ERROR - ' + e.toString());
+
 		el.createEl('p', {text: 'Error - ' + e.toString()});
+
+
 	}
 	
 		});
