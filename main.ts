@@ -90,27 +90,27 @@ row.createEl("td", { text: coin['365d'].price_change_pct, cls: this.getChangeCol
 
 async getCurrencies(url : string) : Promise<Coin[]> {
 
+//debug output
+console.log('requesting now')
 
 try{
-	const data = await request({
-		url: url,
-		headers:
-		{
-			"Accept":"application/json",
-			mode: 'no-cors'
-		}
+	const data = await request( {
+		url: url
 	});
-	
+	 
 	//DEBUG output
-	console.log(data);
+	console.log('response data: ' + data);
 	//
 	
 	
-	return JSON.parse(data)
+	let out = JSON.parse(data);
+	console.log('parsed data: ' + out.toString())
+
+	return out;
 	
 	
 }catch(e){
-	console.log(e);
+	console.log('ERROR - ' + e);
 	
 
 	
@@ -172,7 +172,7 @@ async onload() {
 			*/
 
 		//build URL with the formatted block source
-		let requestUrl = "http://api.nomics.com/v1/currencies/ticker?key=" + apiKey + 
+		let requestUrl = "https://api.nomics.com/v1/currencies/ticker?key=" + apiKey + 
 		"&ids=" +
 		blockSource +
 		"&per-page=100&page=1";
@@ -229,7 +229,7 @@ async onload() {
 		loadingNotify.remove(); 
 				
 	}catch(e) {
-		console.log(e.toString());
+		console.log('ERROR - ' + e.toString());
 		el.createEl('p', {text: 'Error - ' + e.toString()});
 	}
 	
