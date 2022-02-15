@@ -4,260 +4,239 @@ import numeral from 'numeral'
 import { CryptoModal } from './crypto-modal'
 
 //code block processor
-import { cryptoProcessor } from "./processors/cryptoProcessor";
+
 import { Console } from 'console';
 
 export const CRYPTONATOR_API : string = 'https://api.cryptonator.com/api'
 
+const apiKey = "5b7619f704e9f1280cfae0c98813f56e831ee27a";
+//let userApiKey = ""; //let user set their own api key
 
 interface CryptoLookupSettings {
-	defaultBase: string;
-	defaultTarget: string;
+defaultBase: string;
+defaultTarget: string;
 }
 
-interface CurrencyResult {
-	ticker: CurrencyTicker;
-	timestamp: number;
-	success: boolean;
-	error: string;
+interface Coin {
+
+id: string;
+symbol: string;
+name: string;
+logo_url: string;
+price: string;
+market_cap: string; 
+market_cap_dominance: string;
+rank: string;
+high: string;
+high_timestamp: string; 
+"1d": CoinTimeframe;
+"7d": CoinTimeframe;
+"30d": CoinTimeframe;
+"365d": CoinTimeframe;
 }
 
-interface CurrencyTicker {
-	base: string; 
-	target: string; 
-	price: number;
-	volume: number;
-	change: number;
-}
+interface CoinTimeframe {
 
+volume: string;
+price_change: string;
+price_change_pct: string;
+volume_change: string;
+volume_change_pct: string;
+market_cap_change: string;
+market_cap_change_pct: string;
 
-
-
-interface CurrencyEntry {
-	code: string;
-	name: string;
-	statuses: string[]
 }
 
 const DEFAULT_SETTINGS: CryptoLookupSettings = {
-	defaultBase: 'BTC',
-	defaultTarget: 'USD'
+defaultBase: 'BTC',
+defaultTarget: 'USD'
 }
 
 export default class CryptoLookup extends Plugin {
-	settings: CryptoLookupSettings;
+settings: CryptoLookupSettings;
+
+getChangeColorClass(chgPct :any) {
+if(chgPct >= 0) {
+	return 'posChange'
+}else {
+	return 'negChange'
+}
+}
+
+drawCoinRow(table :HTMLElement, tbody :any, coin :Coin) {
+
+
+//DEBUG output
+console.log('\ntest sample:\n' + coin.name + '\n' +  coin.price + '\n' + coin['1d'].volume);
+//
+
+
+const row = tbody.createEl("tr");
+
+
+row.createEl("td", { text: coin.name });
+row.createEl("td", { text: coin.rank });
+row.createEl("td", { text: coin.price });
+row.createEl("td", { text: coin['1d'].price_change_pct, cls: this.getChangeColorClass(coin['1d'].price_change_pct) });
+row.createEl("td", { text: coin['7d'].price_change_pct, cls: this.getChangeColorClass(coin['7d'].price_change_pct) });
+row.createEl("td", { text: coin['30d'].price_change_pct, cls: this.getChangeColorClass(coin['30d'].price_change_pct) });
+row.createEl("td", { text: coin['365d'].price_change_pct, cls: this.getChangeColorClass(coin['365d'].price_change_pct) });
+
+
+}
+
+
+
+
+async getCurrencies(url : string) : Promise<Coin[]> {
+
+
+try{
+	const data = await request({
+		url: url
+	});
 	
-	currencies: CurrencyEntry[];
+	//DEBUG output
+	console.log(data);
+	//
 	
-	async getCurrencies(url : string) : Promise<CurrencyResult> {
+	
+	return JSON.parse(data)
+	
+	
+}catch(e){
+	console.log(e);
+	
+
+	
+}//end getCurrencies()
+
+
+
+}//end draw row function
+
+async getCurrencyListAsJson() : Promise<string> {
+return await request({
+	url: `${CRYPTONATOR_API}/currencies`
+})
+}
+
+
+
+
+
+async onload() {
+	
+	
+
+	//code block processor
+	this.registerMarkdownCodeBlockProcessor("crypto", async (source, el, ctx) => {
+		/* parameters:
+		source 	= 	text inside block (edit mode)
+		el 	 	= 	div to render into (preview mode) */
 		
-		//DEBUG
-		console.log(``);
+		
+		const sourceCoins = source.split("\n").filter((row) => row.length > 0);
+		
+		//placeholder while awaiting results:
+		let loadingNotify = el.createEl("span");
+		loadingNotify.innerHTML = "Loading cryptocurrencies..."
+		
+		//source codeblock text (edit mode)
+		let blockSource = source;
+		
+		//check if invalid characters present
+		if(blockSource.includes(',')  ||  blockSource.includes('&')  ||  blockSource.includes('?')  ||  blockSource.includes('.')) {
+			console.log('error - invalid characters present');
+			//throw "error - invalid character present"
+		}
+		
+		//format coin symbols to fit as URL parameter (new lines delimit):
+		blockSource = blockSource.trim();
+
+		while (blockSource.contains(' ')) {
+		blockSource = blockSource.replace(' ', '');
+		}
+
+		while (blockSource.contains('\n')) {
+			blockSource = blockSource.replace('\n', ',');
+		}
+			
+		blockSource = blockSource.toUpperCase();
+		
+		
+		
+			/*
+	example endpoint url:
+	http://api.nomics.com/v1/currencies/ticker?key=5b7619f704e9f1280cfae0c98813f56e831ee27a&ids=BTC,ETH,LTC&per-page=100&page=1
+			*/
+
+		//build URL with the formatted block source
+		let requestUrl = "http://api.nomics.com/v1/currencies/ticker?key=" + apiKey + 
+		"&ids=" +
+		blockSource +
+		"&per-page=100&page=1";
+		
+		console.log('url: ' + requestUrl);
+		
+		//
+		//make request
+		let coins = await this.getCurrencies(requestUrl)
+		.catch(e => console.log(e.toString()));
+		
+		
+		//DEBUG output:
+		console.log('\ncoins: \n' + coins.toString()); 
+		console.log('\nlength:\n' + coins.length)
 		//
 		
-
-		try{
-		const data = await request({
-			url: url
-		});
-
-		//DEBUG
-		console.log(data);
+		
 		//
+		//draw results to UI:
+		
+		//init table:
+		const table = el.createEl("table");
+		const tbody = table.createEl("tbody");
+		
+		//table header row:
+		const headerRow = tbody.createEl("tr");
+		headerRow.createEl("th", { text: "" });
+		headerRow.createEl("th", { text: "rank" });
+		headerRow.createEl("th", { text: "price" });
+		headerRow.createEl("th", { text: "1d %" });
+		headerRow.createEl("th", { text: "7d %" });
+		headerRow.createEl("th", { text: "1m %" });
+		headerRow.createEl("th", { text: "1y %" });
+		
+		//draw table row for each coin
+		for(let i=0; i<coins.length; i++)
+		{
+			let c = coins[i];
+			
+			this.drawCoinRow(table, tbody, c);
+		}
 		
 		
-		return JSON.parse(data)
-
-	}catch(e){
-		console.log(e);
-	}	
 		
-	}
-	
-	async getCurrencyListAsJson() : Promise<string> {
-		return await request({
-			url: `${CRYPTONATOR_API}/currencies`
-		})
-	}
-	
-	// async preloadCurrencies() {
-	// 	const adapter = this.app.vault.adapter;
-	// 	const dir = this.manifest.dir;
-	// 	const path = normalizePath(`${dir}/currencies.json`)
-	// 	let currencyText : string;
-	//
-	// 	if (await adapter.exists(path)) {
-	// 		currencyText = await adapter.read(path)
-	// 	} else {
-	// 		currencyText = await this.getCurrencyListAsJson()
-	//
-	// 		try {
-	// 			await adapter.write(path, currencyText)
-	// 		} catch(error) {
-	// 			new Notice('The currencies file could not be cached.');
-	// 			console.error(error)
-	// 		}
-	// 	}
-	//
-	// 	this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
-	// }
-	
-	
-	
-	
-	async onload() {
-		await this.loadSettings()
 		
 		/*
-		Requests were returning the Cloudfare DDOS protection html instead of JSON (the "wait 5 seconds" screen) 
-		I think they may have just recently added Cloudfare protection to the API because I never encountered this error before.
+		for (let i = 0; i < coins.length; i++) {
+			
+		}
 		*/
-		//bypass cloudfare ddos protection -
 		
-		
-		
-		//code block processor
-		this.registerMarkdownCodeBlockProcessor("crypto", async (source, el, ctx) => {
-			/*
-			source 	= 	text inside block (edit mode)
-			el 	 	= 	div to render into (preview mode) */
-			
-			
-			const sourceCoins = source.split("\n").filter((row) => row.length > 0);
-			
-			//notify user while awaiting results:
-			let loadingNotify = el.createEl("span");
-			loadingNotify.innerHTML = "Loading cryptocurrencies..."
-			
-			
-			let blockSource = source;
-			
-			//check if any invalid characters present
-			if(blockSource.includes(',')  ||  blockSource.includes('&')  ||  blockSource.includes('?')  ||  blockSource.includes('.')) {
-				console.log('error - invalid characters present');
-				//throw "error - invalid character present"
-			}
-			
-			//format coin symbols to fit as URL parameter (new lines delimit):
-			blockSource = blockSource.trim();
-			blockSource = blockSource.replace(' ', '');
-			blockSource = blockSource.replace('\n', ',');
-			blockSource = blockSource.replace('\n', ',');
-			blockSource = blockSource.replace('\n', ',');
-			blockSource = blockSource.toUpperCase();
-			
-			
-	
-	
-	
-	//build URL with the formatted code block contents
-	let requestUrl = "http://api.nomics.com/v1/currencies/ticker?key=5b7619f704e9f1280cfae0c98813f56e831ee27a&ids=" +
-	blockSource +
-	"&per-page=100&page=1";
-	
-	console.log('url: ' + requestUrl);
+		//remove the 'loading cryptocurrencies...' placeholder
+		loadingNotify.remove(); 
+				
+				
+		});
 
-	let coins = await this.getCurrencies(requestUrl);
-
-	console.log(coins.toString());
-	
-
-
-
-	//draw results to UI:
-	const table = el.createEl("table");
-	const body = table.createEl("tbody");
-	
-	for (let i = 0; i < sourceCoins.length; i++) {
-		const cols = sourceCoins[i].split(",");
-		
-		const row = body.createEl("tr");
-		
-		for (let j = 0; j < cols.length; j++) {
-			row.createEl("td", { text: cols[j] });
-		}
-	}
-	
-});
-
-
-this.addCommand({
-	id: 'insert-default-crypto-ticker',
-	name: 'Insert Default Crypto Ticker',
-	editorCallback: async (editor: Editor) => {
-		if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-			new Notice("Cannot use this command without default base and target in settings")
-		} else {
-			const base = this.settings.defaultBase
-			const target = this.settings.defaultTarget
+		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
+}
 			
-			const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
 			
-			const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
-			editor.replaceSelection(extendedCryptoTicker)
-		}
-	}
-});
-
-this.addCommand({
-	id: 'insert-default-crypto-ticker-extended',
-	name: 'Insert Default Crypto Ticker Extended',
-	editorCallback: async (editor: Editor) => {
-		if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-			new Notice("Cannot use this command without default base and target in settings")
-		} else {
-			const base = this.settings.defaultBase
-			const target = this.settings.defaultTarget
-			
-			const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-			
-			const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
-			const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
-			editor.replaceSelection(extendedCryptoTicker)
-		}
-	}
-});
-
-this.addCommand({
-	id: 'insert-selected-crypto-ticker',
-	name: 'Insert Selected Crypto Ticker',
-	editorCallback: async (editor: Editor) => {
-		const onSubmit = async (base: string, target: string) => {
-			const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-			
-			const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
-			editor.replaceSelection(extendedCryptoTicker)
-		}
-		new CryptoModal(this.app, "USD", onSubmit).open()
-	}
-});
-
-this.addCommand({
-	id: 'insert-selected-crypto-ticker-extended',
-	name: 'Insert Selected Crypto Ticker Extended',
-	editorCallback: async (editor: Editor) => {
-		const onSubmit = async (base: string, target: string) => {
-			const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-			
-			const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
-			const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
-			editor.replaceSelection(extendedCryptoTicker)
-		}
-		new CryptoModal(this.app, "USD", onSubmit).open()
-	}
-});
-
-this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
 }
 
-async loadSettings() {
-	this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-}
-
-async saveSettings() {
-	await this.saveData(this.settings);
-}
-}
 
 class CryptoLookupSettingTab extends PluginSettingTab {
 	plugin: CryptoLookup;
@@ -272,29 +251,23 @@ class CryptoLookupSettingTab extends PluginSettingTab {
 		
 		containerEl.empty();
 		
-		containerEl.createEl('h2', {text: 'Crypto Lookup Defaults'});
+
+		containerEl.createEl('a', {text: 'Crypto Market Cap & Pricing Data Provided By Nomics.', href: 'https://nomics.com'});
+		containerEl.createEl('br');
+
+		containerEl.createEl('p', {text: 'Credits:' } );
+		containerEl.createEl('a', {text: 'Github', href: 'https://github.com/kinabalu' } );
+
+		let ul = containerEl.createEl('ul');
+		let li;
+
+		li = ul.createEl('li');
+		li.createEl('a', {text: 'kinabalu', href: 'https://github.com/kinabalu' } );
+
+		li = ul.createEl('li');
+		li.createEl('a', {text: 'cheeseonamonkey', href: 'https://github.com/cheeseonamonkey' } );
 		
-		new Setting(containerEl)
-		.setName('Base Currency')
-		.setDesc('Default currency we want the price of')
-		.addText(text => text
-			.setPlaceholder('BTC')
-			.setValue(this.plugin.settings.defaultBase)
-			.onChange(async (value) => {
-				this.plugin.settings.defaultBase = value;
-				await this.plugin.saveSettings();
-			}));
-			
-			new Setting(containerEl)
-			.setName('Target Currency')
-			.setDesc('Default target currency to convert base currency into')
-			.addText(text => text
-				.setPlaceholder('USD')
-				.setValue(this.plugin.settings.defaultTarget)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultTarget = value;
-					await this.plugin.saveSettings();
-				}));
-			}
-		}
+	}
 		
+}
+ 
