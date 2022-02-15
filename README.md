@@ -1,14 +1,17 @@
 ## Crypto Lookup for Obsidian
 
 ### Usage
+
 Use code block with identifier `crypto` to fetch live cryptocurrency price data.
 
 ##### Example:
 
 Code block (in edit mode):
+
 ![image](https://user-images.githubusercontent.com/54555500/153975119-914f5b84-2014-4358-b2ad-877b2730cde4.png)
 
 Currency results (in preview mode):
+
 ![image](https://user-images.githubusercontent.com/54555500/153975175-a4a25aa9-74e4-4051-88c3-df49f6adb440.png)
 
 
