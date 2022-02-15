@@ -93,7 +93,12 @@ async getCurrencies(url : string) : Promise<Coin[]> {
 
 try{
 	const data = await request({
-		url: url
+		url: url,
+		headers:
+		{
+			"Accept":"application/json",
+			mode: 'no-cors'
+		}
 	});
 	
 	//DEBUG output
