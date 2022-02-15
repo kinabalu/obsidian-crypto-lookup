@@ -1,4 +1,7 @@
-/* Sets all the text color to red! */
-/*body {*/
-/*    color: red;*/
-/*}*/
+td.negChange {
+    color: red;
+}
+
+td.posChange {
+    color: green;
+}
