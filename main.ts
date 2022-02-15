@@ -63,24 +63,45 @@ if(chgPct >= 0) {
 }
 }
 
+formatCurrency(inp :any) {
+	let split = inp.split('.');
+	let strOut = '$' + split[0] + '.' + split[1].slice(0,2);
+	return strOut;
+}
+
+formatPctChange(inp :any) {
+	
+	let chgPct= inp * 100;
+
+	let split = chgPct.toString().split('.');
+	let strOut = split[0] + '.' + split[1].slice(0,1) + '%'; 
+	return strOut;
+}
+
 drawCoinRow(table :HTMLElement, tbody :any, coin :Coin) {
 
 
 //DEBUG output
-console.log('\ntest sample:\n' + coin.name + '\n' +  coin.price + '\n' + coin['1d'].volume);
+//console.log('\ntest sample:\n' + coin.name + '\n' +  coin.price + '\n' + coin['1d'].volume);
 //
 
 
+//format ticker data:
+
+
+
+
+//add row
 const row = tbody.createEl("tr");
 
-
+//add cells:
 row.createEl("td", { text: coin.name });
 row.createEl("td", { text: coin.rank });
-row.createEl("td", { text: coin.price });
-row.createEl("td", { text: coin['1d'].price_change_pct, cls: this.getChangeColorClass(coin['1d'].price_change_pct) });
-row.createEl("td", { text: coin['7d'].price_change_pct, cls: this.getChangeColorClass(coin['7d'].price_change_pct) });
-row.createEl("td", { text: coin['30d'].price_change_pct, cls: this.getChangeColorClass(coin['30d'].price_change_pct) });
-row.createEl("td", { text: coin['365d'].price_change_pct, cls: this.getChangeColorClass(coin['365d'].price_change_pct) });
+row.createEl("td", { text: this.formatCurrency(coin.price) });
+row.createEl("td", { text: this.formatPctChange(coin['1d'].price_change_pct), cls: this.getChangeColorClass(coin['1d'].price_change_pct) });
+row.createEl("td", { text: this.formatPctChange(coin['7d'].price_change_pct), cls: this.getChangeColorClass(coin['7d'].price_change_pct) });
+row.createEl("td", { text: this.formatPctChange(coin['30d'].price_change_pct), cls: this.getChangeColorClass(coin['30d'].price_change_pct) });
+row.createEl("td", { text: this.formatPctChange(coin['365d'].price_change_pct), cls: this.getChangeColorClass(coin['365d'].price_change_pct) });
 
 
 }
@@ -91,7 +112,7 @@ row.createEl("td", { text: coin['365d'].price_change_pct, cls: this.getChangeCol
 async getCurrencies(url : string) : Promise<Coin[]> {
 
 //debug output
-console.log('requesting now')
+//console.log('requesting now')
 
 try{
 	const data = await request( {
@@ -99,12 +120,12 @@ try{
 	});
 	 
 	//DEBUG output
-	console.log('response data: ' + data);
+	//console.log('response data: ' + data);
 	//
 	
 	
 	let out = JSON.parse(data);
-	console.log('parsed data: ' + out.toString())
+	//console.log('parsed data: ' + out.toString())
 
 	return out;
 	
@@ -177,7 +198,7 @@ async onload() {
 		blockSource +
 		"&per-page=100&page=1";
 		
-		console.log('url: ' + requestUrl);
+		//console.log('url: ' + requestUrl);
 		
 		//
 		//make request
@@ -186,8 +207,8 @@ async onload() {
 		
 		
 		//DEBUG output:
-		console.log('\ncoins: \n' + coins.toString()); 
-		console.log('\nlength:\n' + coins.length)
+		//console.log('\ncoins: \n' + coins.toString()); 
+		//console.log('\nlength:\n' + coins.length)
 		//
 		
 		
