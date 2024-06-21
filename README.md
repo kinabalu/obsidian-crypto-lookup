@@ -1,3 +1,5 @@
+# FYI The API backing the plugin is gone so looking for a viable alternative
+
 ## Crypto Lookup for Obsidian
 Lookup of crypto -> a target currency value using the [Cryptonator API](https://www.cryptonator.com/api).
 
