@@ -1,150 +1,123 @@
-import {App, Editor, Notice, Plugin, PluginSettingTab, Setting, request, normalizePath, moment} from 'obsidian';
-import numeral from 'numeral'
+import {Editor, moment, Notice, Plugin} from 'obsidian';
 
-import { CryptoModal } from './crypto-modal'
+import {CryptoModal} from './crypto-modal'
+import {CryptoLookupSettingTab} from "./settings";
+import {fetchQuote, PriceQuote} from "./price-source";
 
-export const CRYPTONATOR_API : string = 'https://api.cryptonator.com/api'
-
-interface CryptoLookupSettings {
+export interface CryptoLookupSettings {
 	defaultBase: string;
 	defaultTarget: string;
-}
-
-interface CurrencyResult {
-	ticker: CurrencyTicker;
-	timestamp: number;
-	success: boolean;
-	error: string;
-}
-
-interface CurrencyTicker {
-	base: string;
-	target: string;
-	price: number;
-	volume: number;
-	change: number;
-}
-
-interface CurrencyEntry {
-	code: string;
-	name: string;
-	statuses: string[]
+	coinGeckoApiKey: string;
 }
 
 const DEFAULT_SETTINGS: CryptoLookupSettings = {
 	defaultBase: 'BTC',
-	defaultTarget: 'USD'
+	defaultTarget: 'USD',
+	coinGeckoApiKey: '',
+}
+
+/**
+ * Formats a number with grouping and at most the given number of fraction digits,
+ * always showing at least two.
+ */
+function formatNumber(value: number, maxFractionDigits: number): string {
+	return new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: Math.max(2, Math.min(20, maxFractionDigits)),
+	}).format(value)
+}
+
+/**
+ * Formats a price with two decimals, keeping about five significant digits for sub-unit prices
+ * so low-priced coins and crypto-denominated pairs don't collapse to 0.00.
+ */
+function formatPrice(price: number): string {
+	const magnitude = Math.abs(price)
+	if (magnitude === 0 || magnitude >= 1) {
+		return formatNumber(price, 2)
+	}
+	return formatNumber(price, 4 - Math.floor(Math.log10(magnitude)))
+}
+
+/**
+ * Renders a quote as note text, with volume, percent change and timestamp when extended.
+ * Fields the price source did not provide are left out.
+ */
+function formatQuote(quote: PriceQuote, extended: boolean): string {
+	let text = `${quote.base}:${quote.target} price = ${formatPrice(quote.price)}`
+	if (!extended) {
+		return text
+	}
+
+	if (quote.volume !== undefined) {
+		text += `, volume = ${formatNumber(quote.volume, 2)}`
+	}
+	if (quote.changePercent !== undefined) {
+		text += `, change = ${formatNumber(quote.changePercent, 2)}%`
+	}
+	return text + ` on ${moment(quote.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')}`
 }
 
 export default class CryptoLookup extends Plugin {
 	settings: CryptoLookupSettings;
 
-	currencies: CurrencyEntry[];
+	/**
+	 * Fetches a quote and inserts it at the cursor, showing a notice instead when the lookup fails.
+	 */
+	async insertQuote(editor: Editor, base: string, target: string, extended: boolean) {
+		if (!base || !target) {
+			new Notice('Both a base and a target currency are required')
+			return
+		}
 
-	async getCurrencyTicker(base: string, target: string) : Promise<CurrencyResult> {
-		const data = await request({
-			url: `${CRYPTONATOR_API}/ticker/${base}-${target}`
-		})
-
-		return JSON.parse(data) as CurrencyResult
+		try {
+			const quote = await fetchQuote(base.trim(), target.trim(), this.settings.coinGeckoApiKey)
+			editor.replaceSelection(formatQuote(quote, extended))
+		} catch (error) {
+			console.error(error)
+			new Notice(`Crypto lookup failed: ${error instanceof Error ? error.message : error}`)
+		}
 	}
 
-	async getCurrencyListAsJson() : Promise<string> {
-		return await request({
-			url: `${CRYPTONATOR_API}/currencies`
-		})
+	/**
+	 * Registers a command that inserts a quote for the default currencies from settings.
+	 */
+	addDefaultTickerCommand(id: string, name: string, extended: boolean) {
+		this.addCommand({
+			id,
+			name,
+			editorCallback: (editor: Editor) => {
+				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
+					new Notice("Cannot use this command without default base and target in settings")
+					return
+				}
+				void this.insertQuote(editor, this.settings.defaultBase, this.settings.defaultTarget, extended)
+			}
+		});
 	}
 
-	// async preloadCurrencies() {
-	// 	const adapter = this.app.vault.adapter;
-	// 	const dir = this.manifest.dir;
-	// 	const path = normalizePath(`${dir}/currencies.json`)
-	// 	let currencyText : string;
-	//
-	// 	if (await adapter.exists(path)) {
-	// 		currencyText = await adapter.read(path)
-	// 	} else {
-	// 		currencyText = await this.getCurrencyListAsJson()
-	//
-	// 		try {
-	// 			await adapter.write(path, currencyText)
-	// 		} catch(error) {
-	// 			new Notice('The currencies file could not be cached.');
-	// 			console.error(error)
-	// 		}
-	// 	}
-	//
-	// 	this.currencies = JSON.parse(currencyText).rows as CurrencyEntry[]
-	// }
+	/**
+	 * Registers a command that prompts for the currencies in a modal and inserts a quote.
+	 */
+	addSelectedTickerCommand(id: string, name: string, extended: boolean) {
+		this.addCommand({
+			id,
+			name,
+			editorCallback: (editor: Editor) => {
+				new CryptoModal(this.app, this.settings.defaultTarget, (base, target) => {
+					void this.insertQuote(editor, base, target, extended)
+				}).open()
+			}
+		});
+	}
 
 	async onload() {
 		await this.loadSettings()
 
-		this.addCommand({
-			id: 'insert-default-crypto-ticker',
-			name: 'Insert Default Crypto Ticker',
-			editorCallback: async (editor: Editor) => {
-				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-					new Notice("Cannot use this command without default base and target in settings")
-				} else {
-					const base = this.settings.defaultBase
-					const target = this.settings.defaultTarget
-
-					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-
-					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
-					editor.replaceSelection(extendedCryptoTicker)
-				}
-			}
-		});
-
-		this.addCommand({
-			id: 'insert-default-crypto-ticker-extended',
-			name: 'Insert Default Crypto Ticker Extended',
-			editorCallback: async (editor: Editor) => {
-				if (!this.settings.defaultBase || !this.settings.defaultTarget) {
-					new Notice("Cannot use this command without default base and target in settings")
-				} else {
-					const base = this.settings.defaultBase
-					const target = this.settings.defaultTarget
-
-					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-
-					const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
-					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
-					editor.replaceSelection(extendedCryptoTicker)
-				}
-			}
-		});
-
-		this.addCommand({
-			id: 'insert-selected-crypto-ticker',
-			name: 'Insert Selected Crypto Ticker',
-			editorCallback: async (editor: Editor) => {
-				const onSubmit = async (base: string, target: string) => {
-					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-
-					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}`
-					editor.replaceSelection(extendedCryptoTicker)
-				}
-				new CryptoModal(this.app, "USD", onSubmit).open()
-			}
-		});
-
-		this.addCommand({
-			id: 'insert-selected-crypto-ticker-extended',
-			name: 'Insert Selected Crypto Ticker Extended',
-			editorCallback: async (editor: Editor) => {
-				const onSubmit = async (base: string, target: string) => {
-					const currencyTicker = await this.getCurrencyTicker(base.toLocaleLowerCase(), target.toLocaleLowerCase())
-
-					const formattedTimestamp: string = moment(currencyTicker.timestamp * 1000).format('YYYY-MM-DDTHH:mm:ss')
-					const extendedCryptoTicker: string = `${base}:${target} price = ${numeral(currencyTicker.ticker.price).format('0,00.00')}, volume = ${numeral(currencyTicker.ticker.volume).format('0,00.00')}, change = ${numeral(currencyTicker.ticker.change).format('0,00.00')} on ${formattedTimestamp}`
-					editor.replaceSelection(extendedCryptoTicker)
-				}
-				new CryptoModal(this.app, "USD", onSubmit).open()
-			}
-		});
+		this.addDefaultTickerCommand('insert-default-crypto-ticker', 'Insert Default Crypto Ticker', false)
+		this.addDefaultTickerCommand('insert-default-crypto-ticker-extended', 'Insert Default Crypto Ticker Extended', true)
+		this.addSelectedTickerCommand('insert-selected-crypto-ticker', 'Insert Selected Crypto Ticker', false)
+		this.addSelectedTickerCommand('insert-selected-crypto-ticker-extended', 'Insert Selected Crypto Ticker Extended', true)
 
 		this.addSettingTab(new CryptoLookupSettingTab(this.app, this));
 	}
@@ -155,44 +128,5 @@ export default class CryptoLookup extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class CryptoLookupSettingTab extends PluginSettingTab {
-	plugin: CryptoLookup;
-
-	constructor(app: App, plugin: CryptoLookup) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		let {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Crypto Lookup Defaults'});
-
-		new Setting(containerEl)
-			.setName('Base Currency')
-			.setDesc('Default currency we want the price of')
-			.addText(text => text
-				.setPlaceholder('BTC')
-				.setValue(this.plugin.settings.defaultBase)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultBase = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Target Currency')
-			.setDesc('Default target currency to convert base currency into')
-			.addText(text => text
-				.setPlaceholder('USD')
-				.setValue(this.plugin.settings.defaultTarget)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultTarget = value;
-					await this.plugin.saveSettings();
-				}));
 	}
 }

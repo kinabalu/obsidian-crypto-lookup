@@ -19,7 +19,7 @@ export class CryptoModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 
-		contentEl.createEl("h1", { text: "Select crypto base and target" });
+		this.titleEl.setText("Select crypto base and target");
 
 		new Setting(contentEl).setName("Base").addText((text) =>
 			text
