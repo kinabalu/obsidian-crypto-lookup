@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-crypto-lookup",
 	"name": "Crypto Lookup",
-	"version": "0.0.3",
+	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
 	"description": "Look up cryptocurrency prices from CoinGecko and insert them into notes in any target currency.",
 	"author": "Andrew Lombardi",

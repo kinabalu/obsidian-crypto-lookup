@@ -1,4 +1,37 @@
-/* Sets all the text color to red! */
-/*body {*/
-/*    color: red;*/
-/*}*/
+.crypto-lookup-table {
+	width: auto;
+	border-collapse: collapse;
+}
+
+.crypto-lookup-table th,
+.crypto-lookup-table td {
+	padding: 2px 12px 2px 0;
+}
+
+.crypto-lookup-price,
+.crypto-lookup-change {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.crypto-lookup-change.is-positive {
+	color: var(--color-green);
+}
+
+.crypto-lookup-change.is-negative {
+	color: var(--color-red);
+}
+
+.crypto-lookup-error td {
+	color: var(--text-error);
+}
+
+.crypto-lookup-status,
+.crypto-lookup-footer {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.crypto-lookup-footer {
+	margin-top: 4px;
+}
