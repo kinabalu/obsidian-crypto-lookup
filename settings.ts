@@ -38,6 +38,27 @@ export class CryptoLookupSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		new Setting(containerEl).setName('Live price blocks').setHeading();
+
+		new Setting(containerEl)
+			.setName('Refresh interval')
+			.setDesc('Minutes between price updates for open crypto code blocks. Use 0 to only update when the note is rendered.')
+			.addText(text => {
+				text.inputEl.type = 'number';
+				text.inputEl.min = '0';
+				text
+					.setPlaceholder('5')
+					.setValue(String(this.plugin.settings.refreshMinutes))
+					.onChange(async (value) => {
+						const minutes = Number(value);
+						if (!Number.isFinite(minutes) || minutes < 0) {
+							return;
+						}
+						this.plugin.settings.refreshMinutes = minutes;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		new Setting(containerEl).setName('Price data').setHeading();
 
 		new Setting(containerEl)
