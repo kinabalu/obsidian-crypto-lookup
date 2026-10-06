@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@types/codemirror@0.0.108":
-  version "0.0.108"
-  resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-0.0.108.tgz#e640422b666bf49251b384c390cdeb2362585bde"
-  integrity sha512-3FGFcus0P7C2UOGCNUVENqObEb4SFk+S8Dnxq7K6aIsLVs/vDtlangl3PEO0ykaKXyK56swVF6Nho7VsA44uhw==
+"@types/codemirror@5.60.8":
+  version "5.60.8"
+  resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-5.60.8.tgz#b647d04b470e8e1836dd84b2879988fc55c9de68"
+  integrity sha512-VjFgDF/eB+Aklcy15TtOTLQeMjTo07k7KAjql8OK5Dirr7a6sJY4T1uVBDuTVG9VEmn1uUsohOpYnVfgC6/jyw==
   dependencies:
     "@types/tern" "*"
 
@@ -18,11 +18,6 @@
   version "16.11.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.11.5.tgz#e91be5ba4ab88c06095e7b61f9ad1767a1093faf"
   integrity sha512-NyUV2DGcqYIx9op++MG2+Z4Nhw1tPhi0Wfs81TgncuX1aJC4zf2fgCJlJhl4BW9bCSS04e34VkqmOS96w0XQdg==
-
-"@types/numeral@^2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@types/numeral/-/numeral-2.0.2.tgz#8ea2c4f4e64c0cc948ad7da375f6f827778a7912"
-  integrity sha512-A8F30k2gYJ/6e07spSCPpkuZu79LCnkPTvqmIWQzNGcrzwFKpVOydG41lNt5wZXjSI149qjyzC2L1+F2PD/NUA==
 
 "@types/tern@*":
   version "0.23.4"
@@ -139,23 +134,18 @@ esbuild@0.13.8:
     esbuild-windows-64 "0.13.8"
     esbuild-windows-arm64 "0.13.8"
 
-moment@2.29.1:
-  version "2.29.1"
-  resolved "https://registry.yarnpkg.com/moment/-/moment-2.29.1.tgz#b2be769fa31940be9eeea6469c075e35006fa3d3"
-  integrity sha512-kHmoybcPV8Sqy59DwNDY3Jefr64lK/by/da0ViFcuA4DH0vQg5Q6Ze5VimxkfQNSC+Mls/Kx53s7TjP1RhFEDQ==
+moment@2.29.4:
+  version "2.29.4"
+  resolved "https://registry.yarnpkg.com/moment/-/moment-2.29.4.tgz#3dbe052889fe7c1b2ed966fcb3a77328964ef108"
+  integrity sha512-5LC9SOxjSc2HF6vO2CyuTDNivEdoz2IvyJJGj6X8DJ0eFyfszE0QiEd+iXmBvUP3WHxSjFH/vIsA0EN00cgr8w==
 
-numeral@^2.0.6:
-  version "2.0.6"
-  resolved "https://registry.yarnpkg.com/numeral/-/numeral-2.0.6.tgz#4ad080936d443c2561aed9f2197efffe25f4e506"
-  integrity sha1-StCAk21EPCVhrtnyGX7//iX05QY=
-
-obsidian@^0.12.17:
-  version "0.12.17"
-  resolved "https://registry.yarnpkg.com/obsidian/-/obsidian-0.12.17.tgz#8efe75310d0e3988cdeccfbb176d3a8ff7b363c7"
-  integrity sha512-YvCAlRym9D8zNPXt6Ez8QubSTVGoChx6lb58zqI13Dcrz3l1lgUO+pcOGDiD5Qa67nzDZLXo3aV2rqkCCpTvGQ==
+obsidian@1.13.1:
+  version "1.13.1"
+  resolved "https://registry.yarnpkg.com/obsidian/-/obsidian-1.13.1.tgz#3dc280d49e8391a0e2958ca90ee71a6d45fd14d6"
+  integrity sha512-qtTEA2pmhJzhuhJqzbBFRYhpIOqvW+krDYjtFynv66KbxBbumHBlsJfWw3I4jtnK/6fZwbQhCrmmDdRwXmX56w==
   dependencies:
-    "@types/codemirror" "0.0.108"
-    moment "2.29.1"
+    "@types/codemirror" "5.60.8"
+    moment "2.29.4"
 
 tslib@2.3.1:
   version "2.3.1"
